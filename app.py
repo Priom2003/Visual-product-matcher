@@ -8,7 +8,6 @@ from PIL import Image
 from torchvision import models, transforms
 from io import BytesIO
 import requests
-import base64
 
 # -----------------------------
 # CONFIG
@@ -68,15 +67,41 @@ def search_similar(image, top_k=6):
                 "id": item["id"],
                 "name": item["name"],
                 "category": item["category"],
-                "image_path": item["image_path"],
+                "image_path": item.get("image_path"),   # may be local path
+                "image_url": item.get("image_url"),     # optional URL
                 "similarity": float(1 / (1 + dist))
             })
     return results
 
-def image_to_base64(img_path):
-    with open(img_path, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+# -----------------------------
+# LOAD IMAGE FOR DISPLAY
+# -----------------------------
+def load_display_image(r):
+    """
+    Load image from local path or URL for Streamlit display.
+    Handles Windows/Linux paths and missing files.
+    """
+    # Try local path first
+    img_path = r.get("image_path")
+    if img_path:
+        img_path = img_path.replace("\\", "/")  # Windows → Linux safe
+        if os.path.exists(img_path):
+            try:
+                return Image.open(img_path).convert("RGB")
+            except Exception as e:
+                st.warning(f"Failed to open image at {img_path}: {e}")
+
+    # Fallback to URL if available
+    img_url = r.get("image_url")
+    if img_url:
+        try:
+            resp = requests.get(img_url)
+            return Image.open(BytesIO(resp.content)).convert("RGB")
+        except Exception as e:
+            st.warning(f"Failed to load image from URL {img_url}: {e}")
+
+    # If both fail, return None
+    return None
 
 # -----------------------------
 # UI LAYOUT
@@ -116,8 +141,8 @@ with col1:
         try:
             resp = requests.get(url_input)
             query_image = Image.open(BytesIO(resp.content)).convert("RGB")
-        except:
-            st.error("⚠️ Failed to load image from URL")
+        except Exception as e:
+            st.error(f"⚠️ Failed to load image from URL: {e}")
 
     top_k = st.slider("Filter by Top Results", min_value=1, max_value=8, value=4, step=1)
     search_btn = st.button("🔍 Search Similar Products")
@@ -127,7 +152,7 @@ with col2:
         st.image(query_image, caption="Query Image", width=300)
 
 # -----------------------------
-# SEARCH RESULTS
+# SEARCH RESULTS DISPLAY
 # -----------------------------
 if search_btn and query_image is not None:
     with st.spinner("Extracting features and searching..."):
@@ -145,7 +170,11 @@ if search_btn and query_image is not None:
                     "box-shadow:0 1px 3px rgba(0,0,0,0.1);'>",
                     unsafe_allow_html=True
                 )
-                st.image(r["image_path"], caption=None, width=224)
+                img_to_show = load_display_image(r)
+                if img_to_show:
+                    st.image(img_to_show, caption=None, width=224)
+                else:
+                    st.warning(f"Image not found: {r.get('image_path') or r.get('image_url')}")
                 st.markdown(f"**{r['name']}**  \n*{r['category']}*")
                 st.caption(f"Similarity: {r['similarity']:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
