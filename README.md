@@ -2,6 +2,13 @@
 
 Working Application URL : https://visual-appuct-matcher-huqbft5t.streamlit.app/
 
+## Run locally
+```bash```
+1. pip install -r requirements.txt
+2. python scripts/download_images.py
+3. python scripts/build_index.py
+4. streamlit run app.py
+
 Short Description :
 
 Visual-product-matcher is a Python-based tool designed to identify and match visually similar products using deep learning techniques. The system leverages image analysis and machine learning methods to automate the task of product comparison for e-commerce or inventory management applications.
