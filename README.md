@@ -1,6 +1,6 @@
-# **__Visual-Product-Matcher__**
+**__Visual-Product-Matcher__**
 
-## Tech Stack
+*Tech Stack*
 
 - **Frontend:** Streamlit  
 - **Backend / ML:** PyTorch, torchvision, NumPy  
